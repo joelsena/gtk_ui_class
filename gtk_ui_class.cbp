@@ -31,6 +31,10 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="cadastro_simples.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="glade_ui.glade" />
 		<Extensions>
 			<lib_finder disable_auto="1" />
 		</Extensions>
