@@ -1,6 +1,7 @@
 #include <gtk/gtk.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 
 GtkBuilder *builder;
 GtkWidget *window;
@@ -14,11 +15,25 @@ typedef struct {
     struct User* prox;
 } User;
 
-int id = 0;
+typedef struct {
+    int id;
+    char nome[100];
+    char email[100];
+} UserFile;
+
 User* cabecalho_user;
 User* proximo_user;
 
+// window
+void on_main_window_destroy(GtkWidget *widget, gpointer data) {
+    gtk_main_quit(); // Comando para fechar um programa GTK
+}
+
+
+// Shared
 void display_message(char text[100], char secondary_text[100], char icon_name[100]) {
+
+
     GtkMessageDialog *mensagem_dialogo = gtk_builder_get_object(builder, "mensagem");
 
     g_object_set(mensagem_dialogo, "text", text, NULL);
@@ -41,6 +56,8 @@ void login(char *email, char *senha, bool *lembrar) {
         display_message("Aviso", "Email ou senha incorretos!", "dialog-error");
     }
 }
+
+// "view_login" stack
 void on_button_login_clicked(GtkWidget *widget, gpointer data) {
     // variavel que aponta para o input com o nome email
     char *email = gtk_entry_get_text(gtk_builder_get_object(builder, "email"));
@@ -51,71 +68,81 @@ void on_button_login_clicked(GtkWidget *widget, gpointer data) {
     login(email, senha, lembrar);
 }
 
-void on_main_window_destroy(GtkWidget *widget, gpointer data) {
-    gtk_main_quit(); // Comando para fechar um programa GTK
-}
 
+
+// "view_inicial" stack
 void on_button_cadastrar_inicial_clicked(GtkWidget *widget, gpointer data) {
     gtk_stack_set_visible_child_name(stack, "view_cadastro");
 }
-
 void on_button_listar_inicial_clicked(GtkWidget *widget, gpointer data) {
     gtk_stack_set_visible_child_name(stack, "view_listar");
 }
-
 void on_button_sair_inicial_clicked(GtkWidget *widget, gpointer data) {
     gtk_stack_set_visible_child_name(stack, "view_login");
     g_object_set(window, "icon_name", "changes-prevent", NULL);
 }
 
+
+
+// "view_cadastro" stack
 void on_button_cad_voltar_clicked(GtkWidget *widget, gpointer data) {
     gtk_stack_set_visible_child_name(stack, "view_inicial");
 }
-
-void on_button_listar_voltar_clicked(GtkWidget *widget, gpointer data) {
-    gtk_stack_set_visible_child_name(stack, "view_inicial");
-}
-
 // TO-DO: impedir cadastros repetidos
 void on_button_cadastrar_clicked(GtkWidget *widget, gpointer data) {
     char *cad_nome = gtk_entry_get_text(gtk_builder_get_object(builder, "cad_nome"));
     char *cad_email = gtk_entry_get_text(gtk_builder_get_object(builder, "cad_email"));
+    UserFile cad_user;
+    int rand_id;
+
 
     if(strcmp(cad_nome, "") == 0) {
         display_message("Aviso!!!", "Campo 'Nome' obrigatorio!!", "dialog-error");
     } else {
         // Continua o cadastro
-        id++;
-        proximo_user->id = id;
-        strcpy(proximo_user->nome, cad_nome);
-        strcpy(proximo_user->email, cad_email);
+        // Retorna um número aleatório de 0 à 300
+        rand_id = random_number(300);
+        // proximo_user->id = id;
+        // strcpy(proximo_user->nome, cad_nome);
+        // strcpy(proximo_user->email, cad_email);
+        cad_user.id = rand_id;
+        strcpy(cad_user.nome, cad_nome);
+        strcpy(cad_user.email, cad_email);
+        writeFile("lista_de_usuarios.txt", &cad_user);
 
         char texto[100];
-        g_snprintf(texto, 100, "%s%s%s", "Usuario: ", proximo_user->nome, " cadastrado!");
-        display_message("Aviso", texto, "dialog-emblem-default");
+        // g_snprintf(texto, 100, "%s%s%s", "Usuario: ", cad_user.nome, " cadastrado!");
+        // display_message("Aviso", texto, "dialog-emblem-default");
 
         // Aloca o espaço de memória para o próximo item da lista
-        proximo_user->prox = (User*) malloc(sizeof(User));
-        proximo_user = proximo_user->prox;
+        // proximo_user->prox = (User*) malloc(sizeof(User));
+        // proximo_user = proximo_user->prox;
     }
 }
 
+
+
+// "view_listar" stack
+void on_button_listar_voltar_clicked(GtkWidget *widget, gpointer data) {
+    gtk_stack_set_visible_child_name(stack, "view_inicial");
+}
 void on_button_listar_clicked(GtkWidget *widget, gpointer data) {
     // Seta o proximo item da lista para null
-    proximo_user->prox = NULL;
+    // proximo_user->prox = NULL;
     // E inicializo minha lista novamente
-    proximo_user = cabecalho_user;
+    // proximo_user = cabecalho_user;
 
     GtkTreeIter *iter;
     // Limpa o list storage para n repetir na UI
     gtk_list_store_clear(modelo_armazenamento);
 
+    /*
     while(proximo_user->prox != NULL) {
-        /* g_print("id: %d | nome: %s | email: %s\n",
+         g_print("id: %d | nome: %s | email: %s\n",
             proximo_user->id,
             proximo_user->nome,
             proximo_user->email
-        ); */
+        );
 
         // Somente adiciona uma linha na nossa lista
         gtk_list_store_append(modelo_armazenamento, &iter);
@@ -129,7 +156,71 @@ void on_button_listar_clicked(GtkWidget *widget, gpointer data) {
 
         proximo_user = proximo_user->prox;
     }
+    */
+
+    FILE *arq;
+    int result;
+
+    arq = fopen("lista_de_usuarios.txt", "rt");
+
+    if(arq == NULL) {
+        display_message("Aviso", "Problemas na abertura do arquivo!", "dialog-error");
+    } else {
+        char linha[150];
+
+        // Enquanto não chegar no final do arquivo
+        while(!feof(arq)) {
+            result = fgets(linha, 150, arq); // o 'fgets' lê até 99 caracteres ou até o '\n'
+            if(result) { // foi possível ler a linha
+                char *pt;
+                int cont = 1;
+                UserFile r_user;
+
+                // Quebra a string retornando o ponteiro para o primeiro token
+                pt = strtok(linha, "/\n");
+                while(pt) {  //enquanto pt != NULL
+                    // Para cada sequencia de aparição essa string deve ser armazenda em diferentes atributos do r_user
+                    // printf("Token: %s\n", pt);
+                    switch(cont) {
+                        case 1:
+                            r_user.id = atoi(pt);
+                            break;
+                        case 2:
+                            strcpy(r_user.nome, pt);
+                            break;
+                        case 3:
+                            strcpy(r_user.email, pt);
+                            break;
+                    }
+
+                    // Retorna o ponteiro para o próximo token
+                    pt = strtok(NULL,"/\n");
+                    cont++;
+                }
+                // Acaba a linha
+                // Armazenar no list_store
+                // Somente adiciona uma linha na nossa lista
+                gtk_list_store_append(modelo_armazenamento, &iter);
+                // Atribui os dados nas colunas respectivas configuradas no glade anteriormente
+                gtk_list_store_set(modelo_armazenamento, &iter,
+                    0, r_user.id,
+                    1, r_user.nome,
+                    2, r_user.email,
+                    -1
+                );
+            }
+        }
+    }
+    fclose(arq);
 }
+
+int random_number(int max_number) {
+    srand(time(NULL));
+    return rand() % max_number;
+}
+
+void readFile(char *filename);
+void writeFile(char *filename, UserFile *user);
 
 int main(int argc, char *argv[]) {
     // Aloca memória para nossa lista encadeada
@@ -166,4 +257,26 @@ int main(int argc, char *argv[]) {
     gtk_widget_show_all(window);
     gtk_main();
     return 0;
+}
+
+void writeFile(char *filename, UserFile *user) {
+    FILE *arq;
+    int result;
+
+    // "wt" abertura para gravação, arquivo texto. Obs: sobrescreve
+    // "rt" abertura para leitura, arquivo texto
+    // "at" abertura para adicionar conteúdo, arquivo texto
+    arq = fopen(filename, "a");
+
+    if(arq == NULL) {
+        display_message("Aviso", "Problemas na abertura do arquivo!", "dialog-error");
+    } else {
+        result = fprintf(arq, "%d/%s/%s\n", user->id, user->nome, user->email);
+
+        if(result == EOF)
+            display_message("Erro", "Erro no cadastro do usuario", "dialog-error");
+
+        display_message("Sucesso", "Usuario cadastrado com sucesso!!!", "emblem-default");
+    }
+    fclose(arq);
 }

@@ -13,7 +13,11 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="`pkg-config --cflags gtk+-3.0`" />
 				</Compiler>
+				<Linker>
+					<Add option="`pkg-config --libs gtk+-3.0`" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/gtk_ui_class" prefix_auto="1" extension_auto="1" />
@@ -22,9 +26,11 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="`pkg-config --cflags gtk+-3.0`" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add option="`pkg-config --libs gtk+-3.0`" />
 				</Linker>
 			</Target>
 		</Build>
